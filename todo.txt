@@ -1,0 +1,47 @@
+Cel zajęć  
+Celem zajęć jest napisanie prostej aplikacji internetowej spełniającej wysokie standardy bezpieczeństwa.   
+
+ Wprowadzenie
+
+Tworząc oprogramowanie programiści najczęściej skupiają się na funkcjonalności i wydajności systemu. Jednak tym razem pełna uwaga powinna być skupiona na kwestiach bezpieczeństwa. Dlatego realizując zadanie nie ma większego znaczenia wygląda aplikacji, ani jej możliwości - liczy się to w jaki sposób sprawdza ona poprawność danych, czy ma restrykcyjne ustawienia początkowe, czy poprawnie wykorzystuje algorytmy kryptograficzne.
+
+Dobrym materiałem do tego rodzaju ćwiczeń jest moduł uwierzytelniania. Jest on kluczowym elementem ochrony systemu, dlatego powinien być napisany wyjątkowo starannie. Na poprzednich zajęciach uczyliśmy się wielu technik, które powinny być wykorzystane przy tej okazji:
+
+walidacja danych wejściowych (z negatywnym nastawieniem),
+opóźnienia i limit prób (żeby utrudnić zdalne zgadywanie i atak brute-force),
+ograniczone informowanie o błędach (np. o tym przyczynie odmowy uwierzytelenia),
+bezpieczne przechowywanie hasła (wykorzystanie kryptograficznych funcji mieszających, wykorzystanie soli, wielokrotne hashowanie)
+kontrola siły hasła, żeby uświadomić użytkownikowi problem
+monitorowanie pracy systemu (np. żeby poinformować użytkownika o nowych komputerach, które łączyły się z jego kontem)
+zarządzanie uprawnieniami do zasobów
+Za modułem uwierzytelniania napiszmy prostą funkcjonalność publikowania i przeglądania prostych notatek. Notatki mogą być publiczne, albo ograniczone do grupy wybranych użytkowników.
+
+ Potrzebna wiedza
+
+podstawowa znajomość języka python
+wiedza i umiejętności z poprzednich zajęć dotyczących konfiguracji Apache oraz bezpieczeństwa aplikacji internetowych,
+
+ Dodatkowe informacje
+
+http://www.petefreitag.com/item/505.cfm - 20 ways to Secure your Apache Configuration
+
+http://httpd.apache.org/docs/2.2/misc/security_tips.html - Apache Security Tips
+
+Hasła dla Google: authentication, WWW security
+
+Podstawowe wymagania:
+
+Napisz aplikację WWW realizującą uwierzytelnianie w oparciu o tajne hasło. Zwróć uwagę na:
+
+(niezbędne) restrykcyjna weryfikacje danych pochodzących z formularza login-hasło,
+(niezbędne) przechowywanie hasła chronione funkcją hash i solą,
+(niezbędne) możliwość umieszczenia na serwerze notatek dostępnych publicznie lub dla określonych użytkowników,
+(niezbędne) zabezpieczenie transmisji poprzez wykorzystanie protokołu https,
+(niezbędne) możliwość zmiany hasła,
+(niezbędne) możliwość odzyskania dostępu w przypadku utraty hasła,
+dodatkowa kontrola spójności sesji (przeciw atakom XSRF),
+wielokrotne wykorzystanie funkcji hash, żeby wydłużyć ataki brute-force na hash,
+weryfikacja liczby nieudanych prób logowania,
+dodanie opóźnienia przy weryfikacji hasła w celu wydłużenia ataków zdalnych,
+sprawdzanie jakości hasła (jego entropii),
+informowanie użytkownika o nowych podłączeniach do jego konta.
