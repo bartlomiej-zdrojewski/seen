@@ -38,7 +38,8 @@ def getPasswordEntropy(password):
 def sanitizeText(text):
     if type(text) is not str:
         return ""
-    # TODO CRITICAL
+    text = text.replace("<", "&lt;")
+    text = text.replace(">", "&gt;")
     return text
 
 
@@ -88,17 +89,12 @@ def after_request(response):
 
 @app.route("/", methods=[GET])
 def homePage():
-    return redirect(url_for("loginPage"))
+    return redirect(url_for("logInPage"))
 
 
-@app.route("/login", methods=[GET])
-def loginPage():
-    return render_template("login.html")
-
-
-@app.route("/logout", methods=[GET])
-def logoutPage():
-    return render_template("logout.html")
+@app.route("/log-in", methods=[GET])
+def logInPage():
+    return render_template("log-in.html")
 
 
 @app.route("/register", methods=[GET])
@@ -108,9 +104,9 @@ def registerPage():
 
 @app.route("/reset-password", methods=[GET])
 def resetPasswordPage():
-    token = request.args.get("token")
+    token = sanitizeText(request.args.get("token"))
     if token:
-        return render_template("reset-password-token.html")
+        return render_template("reset-password-token.html", token=token)
     return render_template("reset-password.html")
 
 
@@ -124,9 +120,9 @@ def notePage(code):
     if dbi.validateUserReadAccessToNote(note.code):
         return render_template(
             "note-read-access.html",
-            note_code=note.code,
             note_tile=note.title,
-            note_description=note.description)
+            note_description=note.description,
+            note_url="seen.com{}".format(url_for("notePage", code=note.code)))
     return render_template("note-no-access.html")
 
 
@@ -135,19 +131,19 @@ def securePage():
     return redirect(url_for("secureProfilePage"))
 
 
-@app.route("/secure/profile", methods=[GET])
+@app.route("/secure/user", methods=[GET])
 def secureProfilePage():
     user_login = request.environ["secure_user_login"]
     user = dbi.getUser(user_login)
     return render_template(
-        "secure-profile.html",
+        "secure-user.html",
         user_login=user.login,
         user_email=user.email,
         user_name=user.name,
         user_surname=user.surname)
 
 
-@app.route("/secure/profile/change-password", methods=[GET])
+@app.route("/secure/user/change-password", methods=[GET])
 def secureChangePasswordPage():
     return render_template("secure-change-password.html")
 
@@ -162,26 +158,35 @@ def secureNoteListPage():
 @app.route("/secure/note/<code>", methods=[GET])
 def secureNotePage(code):
     if not dbi.doesNoteExist(code):
-        return render_template("note-no-access.html")
+        return render_template("secure-note-no-access.html")
     note = dbi.getNote(code)
     user_login = request.environ["secure_user_login"]
     if dbi.validateUserWriteAccessToNote(note.code, user_login):
+        note_authorized_users_text = ""
+        for user in note.authorized_users:
+            note_authorized_users_text += "{}, ".format(user)
+        if note_authorized_users_text:
+            note_authorized_users_text = note_authorized_users_text[:-2]
         return render_template(
-            "note-write-access.html",
+            "secure-note-write-access.html",
             note_code=note.code,
-            note_tile=note.title,
+            note_title=note.title,
             note_description=note.description,
-            note_authorized_users=note.authorized_users,
+            note_authorized_users_text=note_authorized_users_text,
             note_is_public=note.is_public,
-            note_url=url_for("notePage", code=note.code))
+            note_url="seen.com{}".format(url_for("notePage", code=note.code)))
     if dbi.validateUserReadAccessToNote(note.code, user_login):
         return render_template(
-            "note-read-access.html",
-            note_code=note.code,
+            "secure-note-read-access.html",
             note_tile=note.title,
             note_description=note.description,
-            note_url=url_for("notePage", code=note.code))
-    return render_template("note-no-access.html")
+            note_url="seen.com{}".format(url_for("notePage", code=note.code)))
+    return render_template("secure-note-no-access.html")
+
+
+@app.route("/secure/log-out", methods=[GET])
+def logoutPage():
+    return render_template("secure-log-out.html")
 
 
 #
@@ -209,7 +214,7 @@ note_namespace = api.namespace(
     description="Note Service API")
 
 
-@user_namespace.route("/login")
+@user_namespace.route("/log-in")
 class LoginResource(Resource):
 
     log_in_form_model = api.model("Log In Form Model", {
@@ -252,7 +257,7 @@ class LoginResource(Resource):
         return None
 
 
-@user_namespace.route("/logout")
+@user_namespace.route("/log-out")
 class LogoutResource(Resource):
 
     @api.doc(responses={200: "OK",
@@ -267,7 +272,7 @@ class LogoutResource(Resource):
                               "(ID: {}).".format(session_id)), 500)
         request.environ["secure_session_id"] = ""
         request.environ["secure_session_expiration_date"] = 0
-        return mr(jsonify(redirect_url=url_for("loginPage")), 200)
+        return mr(jsonify(redirect_url=url_for("logInPage")), 200)
 
 
 @user_namespace.route("/register")
@@ -295,7 +300,7 @@ class RegisterResource(Resource):
             return mr(jsonify(error_message="The user already exists (login: "
                               "{}).".format(login)), 400)
         self.__registerUserFromRequest(request)
-        return "Created", 201
+        return mr(jsonify(redirect_url=url_for("logInPage")), 201)
 
     def __validateRegisterRequest(self, request):
         login = request.form.get("login")
@@ -355,6 +360,7 @@ class RegisterResource(Resource):
             abort(500, "Could not register an user. The user already exists "
                   "(login: {}).".format(login))
         id = dbi.getUserIdFromLogin(login)
+        login = login.lower()
         password_hash = dbi.hashPassword(password)
         user = User(
             id,
@@ -488,12 +494,12 @@ class NoteListResource(Resource):
         user_id = dbi.getUserIdFromLogin(user_login)
         code = dbi.generateNoteCode()
         id = dbi.getNoteIdFromCode(code)
-        note = Note(id, code, "", "", user_login, [], False)
+        note = Note(id, code, "New note", "", user_login, [], False)
         note_validation_error = note.validate()
         if note_validation_error:
             return mr(jsonify(error_message=note_validation_error), 400)
         dbi.getDatabase().set(note.id, note.toData())
-        dbi.getDatabase().hset(NOTE_ID_TO_OWNER_ID, note.id, user_id)
+        dbi.getDatabase().hset(NOTE_ID_TO_OWNER_ID_MAP, note.id, user_id)
         return mr(jsonify(
             redirect_url=url_for("secureNotePage", code=code)), 201)
 
@@ -524,13 +530,18 @@ class NoteResource(Resource):
         authorized_users = request.form.get("authorized_users")
         is_public = request.form.get("is_public")
         if title is not None:
+            if not title:
+                return mr(jsonify(error_message="The title must not "
+                                  "be empty."), 400)
             title = sanitizeText(title)
+        print(title, flush=True)
         if description is not None:
             description = sanitizeText(description)
         if authorized_users is not None:
             authorized_users = authorized_users.split(",")
-            authorized_users[:] = [sanitizeText(user.strip("[]").strip())
-                                   for user in authorized_users]
+            authorized_users[:] = [
+                sanitizeText(user.lower().strip("[]").strip())
+                for user in authorized_users]
         if is_public is not None:
             if is_public.lower() == "true":
                 is_public = True
@@ -557,5 +568,5 @@ class NoteResource(Resource):
                               "{}).".format(code, user_login)), 400)
         note_id = dbi.getNoteIdFromCode(code)
         dbi.getDatabase().delete(note_id)
-        dbi.getDatabase().hdel(NOTE_ID_TO_OWNER_ID, note_id)
-        return "OK", 200
+        dbi.getDatabase().hdel(NOTE_ID_TO_OWNER_ID_MAP, note_id)
+        return mr(jsonify(redirect_url=url_for("secureNoteListPage")), 200)

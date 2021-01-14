@@ -29,6 +29,8 @@ class Note:
             return "The ID must not be empty."
         if not self.code:
             return "The code must not be empty."
+        if not self.title:
+            return "The title must not be empty."
         if not self.owner:
             return "The owner must not be empty."
         if type(self.authorized_users) is not list:

@@ -20,50 +20,52 @@
         <div class="collapse navbar-collapse" id="navbarText">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="/log-in">Log In</a>
+                    <a class="nav-link" href="/secure/user">User</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/register">Register</a>
+                    <a class="nav-link active" href="/secure/note">Notes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/secure/log-out">Log out</a>
                 </li>
             </ul>
         </div>
     </nav>
     <div class="container mt-3 mb-3">
-        <h3 class="mb-3">Registering</h3>
         <form id="form">
             <div class="form-group">
-                <label for="login">Login</label>
-                <input name="login" type="text" class="form-control" />
+                <label for="title">Title</label>
+                <input name="title" type="text" value="{{ note_title|safe }}" class="form-control" />
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
-                <input name="password" type="password" class="form-control">
+                <label for="description">Description</label>
+                <textarea name="description" type="text" class="form-control">{{ note_description|safe }}</textarea>
             </div>
             <div class="form-group">
-                <label for="password_repetition">Password repetition</label>
-                <input name="password_repetition" type="password" class="form-control">
+                <label for="authorized_users">Authorized users</label>
+                <input name="authorized_users" type="text" value="{{ note_authorized_users_text|safe }}" class="form-control" />
             </div>
             <div class="form-group">
-                <label for="email">Email</label>
-                <input name="email" type="email" class="form-control" />
+                <div class="form-check">
+                    <input id="checkbox_is_public" name="is_public" type="checkbox" value="{{ 'true' if note_is_public else 'false' }}" class="form-check-input">
+                    <label class="form-check-label" for="is_public">Public note</label>
+                </div>
             </div>
             <div class="form-group">
-                <label for="name">Name</label>
-                <input name="name" type="text" class="form-control" />
+                <input name="code" type="hidden" value="{{ note_code|safe }}">
+                <button type="submit" class="btn btn-primary">Update note</button>
+                <button id="button_delete" class="btn btn-danger">Delete note</button>
             </div>
-            <div class="form-group">
-                <label for="surname">Surname</label>
-                <input name="surname" type="text" class="form-control" />
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Register</button>
+            <div class="alert alert-primary" role="alert">
+                Sharing link:
+                <a href="https://{{ note_url|safe }}">{{ note_url|safe }}</a>
             </div>
             <div class="alert" role="alert">
             </div>
         </form>
     </div>
 
-    <script src="/scripts/register.js"></script>
+    <script src="/scripts/note.js"></script>
     <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
         integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
         crossorigin="anonymous"></script>

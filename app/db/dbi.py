@@ -82,8 +82,8 @@ class DatabaseInterface:
     def getNoteList(self, user_login):
         note_list = []
         user_id = self.getUserIdFromLogin(user_login)
-        for note_id in self.db.hkeys(NOTE_ID_TO_OWNER_ID):
-            if user_id == self.db.hget(NOTE_ID_TO_OWNER_ID, note_id):
+        for note_id in self.db.hkeys(NOTE_ID_TO_OWNER_ID_MAP):
+            if user_id == self.db.hget(NOTE_ID_TO_OWNER_ID_MAP, note_id):
                 if not self.db.exists(note_id):
                     abort(500,
                           "Could not get the note list. One of the notes "
@@ -127,6 +127,7 @@ class DatabaseInterface:
                 abort(500, "Could not validate user's read access to the note. "
                       "The user does not exist (user_login: {}).".format(
                           user_login))
+            user_login = user_login.lower()
             if user_login == note.owner:
                 return True
             if user_login in note.authorized_users:
@@ -143,6 +144,7 @@ class DatabaseInterface:
                 abort(500, "Could not validate user's write access to "
                       "the note. The user does not exist (user_login: "
                       "{}).".format(user_login))
+            user_login = user_login.lower()
             if user_login == note.owner:
                 return True
         return False
@@ -212,13 +214,13 @@ class DatabaseInterface:
         token = str(uuid.uuid4()).replace("-", "")
         token_expiration_date = datetime.utcnow(
         ) + timedelta(seconds=PASSWORD_RESET_TOKEN_EXPIRATION_TIME)
+        user = self.getUser(user_login)
         self.db.hset(
             PASSWORD_RESET_TOKEN_TO_USER_LOGIN_MAP,
-            token, user_login)
+            token, user.login)
         self.db.hset(
             PASSWORD_RESET_TOKEN_TO_PASSWORD_RESET_TOKEN_EXPIRATION_DATE_MAP,
             token, token_expiration_date.isoformat())
-        user = self.getUser(user_login)
         email_address = user.email
         email_title = "A password reset token"
         email_content = "{}\nhttps://seen.com/reset-password?token={}".format(
@@ -274,7 +276,8 @@ class DatabaseInterface:
         session_id = str(uuid.uuid4()).replace("-", "")
         session_expiration_date = datetime.utcnow(
         ) + timedelta(seconds=SESSION_EXPIRATION_TIME)
-        self.db.hset(SESSION_ID_TO_USER_LOGIN_MAP, session_id, user_login)
+        self.db.hset(SESSION_ID_TO_USER_LOGIN_MAP,
+                     session_id, user_login.lower())
         self.db.hset(SESSION_ID_TO_SESSION_EXPIRATION_DATE_MAP,
                      session_id, session_expiration_date.isoformat())
         return (session_id, session_expiration_date)

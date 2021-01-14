@@ -31,7 +31,7 @@ class User:
             return "The password hash must not be empty."
         if not self.email:
             return "The email must not be empty."
-        # TODO regex email validation
+        # TODO regex validate email
         if not self.name:
             return "The name must not be empty."
         if not self.surname:

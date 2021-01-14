@@ -29,11 +29,30 @@
         </div>
     </nav>
     <div class="container mt-3 mb-3">
-        <div class="alert alert-danger" role="alert">
-            Notatka nie istnieje lub nie masz do niej dostępu.
-        </div>
+        <h3 class="mb-3">Logging in</h3>
+        <form id="form">
+            <div class="form-group">
+                <label for="login">Login</label>
+                <input name="login" type="text" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input name="password" type="password" class="form-control">
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Log in</button>
+            </div>
+            <div class="form-group">
+                <a href="/reset-password">
+                    Reset password
+                </a>
+            </div>
+            <div class="alert" role="alert">
+            </div>
+        </form>
     </div>
 
+    <script src="/scripts/log-in.js"></script>
     <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
         integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
         crossorigin="anonymous"></script>

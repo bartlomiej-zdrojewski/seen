@@ -20,20 +20,27 @@
         <div class="collapse navbar-collapse" id="navbarText">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="/log-in">Log In</a>
+                    <a class="nav-link" href="/secure/user">User</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/register">Register</a>
+                    <a class="nav-link" href="/secure/note">Notes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/secure/log-out">Log out</a>
                 </li>
             </ul>
         </div>
     </nav>
     <div class="container mt-3 mb-3">
-        <div class="alert alert-danger" role="alert">
-            Notatka nie istnieje lub nie masz do niej dostępu.
-        </div>
+        <h3 class="mb-3">Logging out</h3>
+        <form id="form">
+            <div class="alert alert-primary" role="alert">
+                Please wait...
+            </div>
+        </form>
     </div>
 
+    <script src="/scripts/log-out.js"></script>
     <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
         integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
         crossorigin="anonymous"></script>
