@@ -1,0 +1,2 @@
+dodatkowa kontrola spójności sesji (przeciw atakom XSRF)
+informowanie użytkownika o nowych podłączeniach do jego konta

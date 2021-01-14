@@ -1,4 +1,6 @@
-pyopenssl
+python-dateutil
+pycryptodome
+redis
 flask
 flask-restplus
 Werkzeug==0.16.1
