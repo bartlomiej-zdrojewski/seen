@@ -232,6 +232,17 @@ class LoginResource(Resource):
         if request_error:
             return mr(jsonify(error_message=request_error), 401)
         login = request.form.get("login")
+        password = request.form.get("password")
+        dbi.delayLogin(login)
+        if not dbi.doesUserExist(login):
+            dbi.recordLoginAttempt(login, False)
+            return mr(jsonify(
+                error_message="The login or password is invalid."), 401)
+        if not dbi.validateUser(login, password):
+            dbi.recordLoginAttempt(login, False)
+            return mr(jsonify(
+                error_message="The login or password is invalid."), 401)
+        dbi.recordLoginAttempt(login, True)
         session_id, expiration_date = dbi.createSession(login)
         response = mr(jsonify(redirect_url=url_for("securePage")), 200)
         response.set_cookie(SESSION_ID_KEY, session_id,
@@ -246,14 +257,13 @@ class LoginResource(Resource):
             return "The login must not be empty."
         if not password:
             return "The password must not be empty."
-        dbi.delayLogin(login)
-        if not dbi.doesUserExist(login):
-            dbi.recordLoginAttempt(login, False)
-            return "The login or password is invalid."
-        if not dbi.validateUser(login, password):
-            dbi.recordLoginAttempt(login, False)
-            return "The login or password is invalid."
-        dbi.recordLoginAttempt(login, True)
+        if len(login) > 25:
+            return "The login must consist of at most 25 characters."
+        if not re.search("^[a-zA-Z]+$", login):
+            return "The login may only constist of small and big letters of " \
+                "the latin alphabet."
+        if len(password) > 64:
+            return "The password must consist of at most 64 characters."
         return None
 
 
@@ -323,11 +333,15 @@ class RegisterResource(Resource):
             return "The surname must not be empty."
         if len(login) < 5:
             return "The login must consist of at least 5 characters."
+        if len(login) > 25:
+            return "The login must consist of at most 25 characters."
         if not re.search("^[a-zA-Z]+$", login):
             return "The login may only constist of small and big letters of " \
                 "the latin alphabet."
         if len(password) < 8:
             return "The password must consist of at least 8 characters."
+        if len(password) > 64:
+            return "The password must consist of at most 64 characters."
         if not re.search(
                 "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%&*])(.*)$",
                 password):
@@ -341,15 +355,31 @@ class RegisterResource(Resource):
         if password != password_repetition:
             return "The password repetition does not match the original " \
                 "password."
-        # TODO regex validate email
+        if len(email) > 128:
+            return "The email must consist of at most 128 characters."
+        if not re.search(
+                "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
+                "(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
+                "@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+"
+                "[a-z0-9](?:[a-z0-9-]*[a-z0-9])$",
+                email):
+            return "The email is invalid."
+        if len(name) > 128:
+            return "The name must consist of at most 128 characters."
+        if not all(c.isalpha() or c.isspace() for c in name):
+            return "The name is invalid."
+        if len(surname) > 128:
+            return "The surname must consist of at most 128 characters."
+        if not all(c.isalpha() or c.isspace() for c in surname):
+            return "The surname is invalid."
         return None
 
     def __registerUserFromRequest(self, request):
-        login = request.form.get("login")
-        password = request.form.get("password")
-        email = sanitizeText(request.form.get("email"))
-        name = sanitizeText(request.form.get("name"))
-        surname = sanitizeText(request.form.get("surname"))
+        login= request.form.get("login")
+        password= request.form.get("password")
+        email= sanitizeText(request.form.get("email"))
+        name= sanitizeText(request.form.get("name"))
+        surname= sanitizeText(request.form.get("surname"))
         if not login:
             abort(500, "Could not register an user. The login must not "
                   "be empty.")
@@ -359,17 +389,17 @@ class RegisterResource(Resource):
         if dbi.doesUserExist(login):
             abort(500, "Could not register an user. The user already exists "
                   "(login: {}).".format(login))
-        id = dbi.getUserIdFromLogin(login)
-        login = login.lower()
-        password_hash = dbi.hashPassword(password)
-        user = User(
+        id= dbi.getUserIdFromLogin(login)
+        login= login.lower()
+        password_hash= dbi.hashPassword(password)
+        user= User(
             id,
             login,
             password_hash,
             email,
             name,
             surname)
-        user_validation_error = user.validate()
+        user_validation_error= user.validate()
         if user_validation_error:
             abort(500,
                   "Could not register an user. The user is invalid. "
@@ -377,20 +407,20 @@ class RegisterResource(Resource):
         dbi.getDatabase().set(user.id, user.toData())
 
 
-@user_namespace.route("/password/change")
+@ user_namespace.route("/password/change")
 class ChangePasswordResource(Resource):
 
-    @api.doc()
+    @ api.doc()
     def post(self):
         """ Changes a user's password. """
         if not request.environ["secure_session_valid"]:
             return mr(jsonify(error_message="The session is invalid."), 401)
-        user_login = request.environ["secure_user_login"]
-        request_error = self.__validateChangePasswordRequest(request)
+        user_login= request.environ["secure_user_login"]
+        request_error= self.__validateChangePasswordRequest(request)
         if request_error:
             return mr(jsonify(error_message=request_error), 400)
-        old_password = request.form.get("old_password")
-        new_password = request.form.get("new_password")
+        old_password= request.form.get("old_password")
+        new_password= request.form.get("new_password")
         if not dbi.validateUser(user_login, old_password):
             return mr(jsonify(
                 error_message="The old password is invalid."), 401)
@@ -398,23 +428,27 @@ class ChangePasswordResource(Resource):
         return "OK", 200
 
     def __validateChangePasswordRequest(self, request):
-        old_password = request.form.get("old_password")
-        new_password = request.form.get("new_password")
-        new_password_repetition = request.form.get("new_password_repetition")
+        old_password= request.form.get("old_password")
+        new_password= request.form.get("new_password")
+        new_password_repetition= request.form.get("new_password_repetition")
         if not old_password:
             return "The old password must not be empty."
         if not new_password:
             return "The new password must not be empty."
         if not new_password_repetition:
             return "The new password repetition must not be empty."
+        if len(old_password) > 64:
+            return "The old password must consist of at most 64 characters."
         if len(new_password) < 8:
             return "The new password must consist of at least 8 characters."
+        if len(new_password) > 64:
+            return "The new password must consist of at most 64 characters."
         if not re.search(
                 "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%&*])(.*)$",
                 new_password):
             return "The new password must contain small and big letters, " \
                 "digits and special characters (!@#$%&*)."
-        password_entropy = getPasswordEntropy(new_password)
+        password_entropy= getPasswordEntropy(new_password)
         if password_entropy < PASSWORD_MINIMAL_ENTROPY:
             return "The new password's etropy is too low ({} bits). At least " \
                 "{} bits of entropy are required.".format(
@@ -425,34 +459,34 @@ class ChangePasswordResource(Resource):
         return None
 
 
-@user_namespace.route("/password/reset")
+@ user_namespace.route("/password/reset")
 class ResetPasswordResource(Resource):
 
-    @api.doc()
+    @ api.doc()
     def post(self):
         """ Resets a user's password. """
-        request_error = self.__validateResetPasswordRequest(request)
+        request_error= self.__validateResetPasswordRequest(request)
         if request_error:
             return mr(jsonify(error_message=request_error), 400)
-        token = request.form.get("token")
+        token= request.form.get("token")
         if token:
             if not dbi.validatePasswordResetToken(token):
                 return mr(jsonify(error_message="The password reset token "
                                   "is invalid."), 400)
-            new_password = request.form.get("new_password")
+            new_password= request.form.get("new_password")
             dbi.resetPassword(token, new_password)
         else:
-            login = request.form.get("login")
+            login= request.form.get("login")
             if not dbi.doesUserExist(login):
                 return "OK", 200
             dbi.createAndSendPasswordResetToken(login)
         return "OK", 200
 
     def __validateResetPasswordRequest(self, request):
-        token = request.form.get("token")
+        token= request.form.get("token")
         if token:
-            new_password = request.form.get("new_password")
-            new_password_repetition = \
+            new_password= request.form.get("new_password")
+            new_password_repetition= \
                 request.form.get("new_password_repetition")
             if not new_password:
                 return "The new password must not be empty."
@@ -460,12 +494,14 @@ class ResetPasswordResource(Resource):
                 return "The new password repetition must not be empty."
             if len(new_password) < 8:
                 return "The new password must consist of at least 8 characters."
+            if len(new_password) > 64:
+                return "The new password must consist of at most 64 characters."
             if not re.search(
                     "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%&*])(.*)$",
                     new_password):
                 return "The new password must contain small and big letters, " \
                     "digits and special characters (!@#$%&*)."
-            password_entropy = getPasswordEntropy(new_password)
+            password_entropy= getPasswordEntropy(new_password)
             if password_entropy < PASSWORD_MINIMAL_ENTROPY:
                 return "The new password's etropy is too low ({:.2f} bits). " \
                     "At least {} bits of entropy are required.".format(
@@ -474,28 +510,33 @@ class ResetPasswordResource(Resource):
                 return "The password repetition does not match the original " \
                     "password."
         else:
-            login = request.form.get("login")
+            login= request.form.get("login")
             if not login:
                 return "The login must not be empty."
+            if len(login) > 25:
+                return "The login must consist of at most 25 characters."
+            if not re.search("^[a-zA-Z]+$", login):
+                return "The login may only constist of small and big letters " \
+                    "of the latin alphabet."
         return None
 
 
-@note_namespace.route("")
+@ note_namespace.route("")
 class NoteListResource(Resource):
 
     # TODO def get (return list of notes)
 
-    @api.doc()
+    @ api.doc()
     def post(self):
         """ Creates a new note. """
         if not request.environ["secure_session_valid"]:
             return mr(jsonify(error_message="The session is invalid."), 401)
-        user_login = request.environ["secure_user_login"]
-        user_id = dbi.getUserIdFromLogin(user_login)
-        code = dbi.generateNoteCode()
-        id = dbi.getNoteIdFromCode(code)
-        note = Note(id, code, "New note", "", user_login, [], False)
-        note_validation_error = note.validate()
+        user_login= request.environ["secure_user_login"]
+        user_id= dbi.getUserIdFromLogin(user_login)
+        code= dbi.generateNoteCode()
+        id= dbi.getNoteIdFromCode(code)
+        note= Note(id, code, "New note", "", user_login, [], False)
+        note_validation_error= note.validate()
         if note_validation_error:
             return mr(jsonify(error_message=note_validation_error), 400)
         dbi.getDatabase().set(note.id, note.toData())
@@ -504,17 +545,17 @@ class NoteListResource(Resource):
             redirect_url=url_for("secureNotePage", code=code)), 201)
 
 
-@note_namespace.route("/<code>")
+@ note_namespace.route("/<code>")
 class NoteResource(Resource):
 
     # TODO def get (return a note)
 
-    @api.doc()
+    @ api.doc()
     def put(self, code):
         """ Updates a note. """
         if not request.environ["secure_session_valid"]:
             return mr(jsonify(error_message="The session is invalid."), 401)
-        user_login = request.environ["secure_user_login"]
+        user_login= request.environ["secure_user_login"]
         if not dbi.doesNoteExist(code):
             return mr(jsonify(error_message="The note does not exist or "
                               "the user does not have a write access to "
@@ -525,37 +566,48 @@ class NoteResource(Resource):
                               "the user does not have a write access to "
                               "the note (note_code: {}, user_login: "
                               "{}).".format(code, user_login)), 400)
-        title = request.form.get("title")
-        description = request.form.get("description")
-        authorized_users = request.form.get("authorized_users")
-        is_public = request.form.get("is_public")
+        title= request.form.get("title")
+        description= request.form.get("description")
+        authorized_users= request.form.get("authorized_users")
+        is_public= request.form.get("is_public")
         if title is not None:
             if not title:
-                return mr(jsonify(error_message="The title must not "
-                                  "be empty."), 400)
-            title = sanitizeText(title)
-        print(title, flush=True)
+                return mr(jsonify(
+                    error_message="The title must not be empty."), 400)
+            if len(title) > 512:
+                return mr(jsonify(
+                    error_message="The title must consist of at most "
+                    "512 characters."), 400)
+            title= sanitizeText(title)
         if description is not None:
-            description = sanitizeText(description)
+            description= sanitizeText(description)
+            if len(description) > (32 * 1024):
+                return mr(jsonify(
+                    error_message="The description must consist of at most "
+                    "32 KB of data."), 400)
         if authorized_users is not None:
-            authorized_users = authorized_users.split(",")
-            authorized_users[:] = [
+            if len(authorized_users) > (2 * 1024):
+                return mr(jsonify(
+                    error_message="The authorized user list must consist "
+                    "of at most 2 KB of data."), 400)
+            authorized_users= authorized_users.split(",")
+            authorized_users[:]= [
                 sanitizeText(user.lower().strip("[]").strip())
                 for user in authorized_users]
         if is_public is not None:
             if is_public.lower() == "true":
-                is_public = True
+                is_public= True
             else:
-                is_public = False
+                is_public= False
         dbi.updateNote(code, title, description, authorized_users, is_public)
         return "OK", 200
 
-    @api.doc()
+    @ api.doc()
     def delete(self, code):
         """ Deletes a note. """
         if not request.environ["secure_session_valid"]:
             return mr(jsonify(error_message="The session is invalid."), 401)
-        user_login = request.environ["secure_user_login"]
+        user_login= request.environ["secure_user_login"]
         if not dbi.doesNoteExist(code):
             return mr(jsonify(error_message="The note does not exist or "
                               "the user does not have a write access to "
@@ -566,7 +618,7 @@ class NoteResource(Resource):
                               "the user does not have a write access to "
                               "the note (note_code: {}, user_login: "
                               "{}).".format(code, user_login)), 400)
-        note_id = dbi.getNoteIdFromCode(code)
+        note_id= dbi.getNoteIdFromCode(code)
         dbi.getDatabase().delete(note_id)
         dbi.getDatabase().hdel(NOTE_ID_TO_OWNER_ID_MAP, note_id)
         return mr(jsonify(redirect_url=url_for("secureNoteListPage")), 200)

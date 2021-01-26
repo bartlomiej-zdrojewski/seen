@@ -1,4 +1,5 @@
 import json
+import re
 
 
 class User:
@@ -31,9 +32,15 @@ class User:
             return "The password hash must not be empty."
         if not self.email:
             return "The email must not be empty."
-        # TODO regex validate email
         if not self.name:
             return "The name must not be empty."
         if not self.surname:
             return "The surname must not be empty."
+        if not re.search(
+                "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
+                "(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
+                "@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+"
+                "[a-z0-9](?:[a-z0-9-]*[a-z0-9])$",
+                self.email):
+            return "The email is invalid."
         return None

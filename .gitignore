@@ -1,3 +1,4 @@
 **/__pycache__/
+/app/email.txt
 /nginx/logs/
 /nginx/certs/scripts/generated

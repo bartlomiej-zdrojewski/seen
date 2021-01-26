@@ -1,5 +1,0 @@
-jan.testowy.dwa@gmail.com
-A password reset token
-b04557495cbd4e7898facb5c6084e87f
-https://seen.com/reset-password?token=b04557495cbd4e7898facb5c6084e87f
-
